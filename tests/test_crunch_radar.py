@@ -60,6 +60,12 @@ class CrunchRadar(unittest.TestCase):
         # 12 h × 1.5 = 18 h at 2 h/day = 9 days before Nov 19
         self.assertIn("start by 2026-11-10", self.add("A3", "2026-11-19", 12))
 
+    def test_estimate_bias_is_not_rounded_before_it_is_used(self):
+        self.add("A1", "2026-11-01", 3, today="2026-10-20")
+        self.run_cli("done", "1", "--hours", "2", today="2026-11-01")
+        # 3 h × 2/3 = exactly 2 h = 1 day; a bias rounded to 0.67 gives 2.01 h and wrongly 2 days
+        self.assertIn("start by 2026-11-29", self.add("A2", "2026-11-30", 3))
+
     def test_estimate_bias_is_1_before_anything_is_done(self):
         self.assertIn("Estimate Bias: 1", self.run_cli("upcoming").stdout)
 
@@ -131,7 +137,8 @@ class CrunchRadar(unittest.TestCase):
                ["add", "--title", "X", "--due", "2026-11-19", "--hours", "lots"],
                ["add", "--title", "  ", "--due", "2026-11-19"],
                ["done", "7", "--hours", "3"], ["done", "1", "--hours", "0"], ["grace", "--set", "2"],
-               ["grace", "--course", "CSCI599", "--set", "-1"]]
+               ["grace", "--course", "CSCI599", "--set", "-1"], ["upcoming", "--days", "-1"],
+               ["crunch", "--weeks", "-2"]]
         for args in bad:
             p = self.run_cli(*args, ok=False)
             self.assertNotEqual(p.returncode, 0, args)
@@ -147,6 +154,15 @@ class CrunchRadar(unittest.TestCase):
         self.assertIn("not valid JSON", p.stderr)
         with open(self.state) as f:
             self.assertEqual(f.read(), '{"items": [')
+
+    def test_a_state_file_with_a_broken_item_is_reported_and_left_alone(self):
+        with open(self.state, "w") as f:
+            f.write('{"items": [{"id": 1, "title": "A3"}]}')
+        p = self.run_cli("upcoming", ok=False)
+        self.assertEqual(p.returncode, 2)
+        self.assertIn("item", p.stderr)
+        with open(self.state) as f:
+            self.assertEqual(f.read(), '{"items": [{"id": 1, "title": "A3"}]}')
 
     def test_marking_an_item_done_twice_is_rejected(self):
         self.add("A3", "2026-11-19", 12)

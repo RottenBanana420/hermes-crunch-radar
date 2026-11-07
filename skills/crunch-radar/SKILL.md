@@ -1,7 +1,7 @@
 ---
 name: crunch-radar
 description: Student deadline radar. Tracks assignments, exams and admin dates, says when to START each one (Start-by Date), warns about Crunch Weeks, keeps a per-course Grace Day ledger, and learns the student's Estimate Bias from actual hours.
-version: 1.0.0
+version: 1.0.1
 author: Kusai Hajuri
 license: MIT
 platforms: [macos, linux]

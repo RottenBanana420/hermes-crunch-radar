@@ -7,7 +7,7 @@ tell you when something is *due*. Crunch Radar tells you when to *start* it.
   (default 2 hours a day).
 - **Escalating nudges** once you are past that date, showing how many hours a day you now need.
 - **Crunch Week** warnings when a week's total effort crosses a threshold (default 15 hours).
-- **Grace Day ledger** per course: how many late days you have left, and what a late submission would leave you with.
+- **Grace Day ledger** per course: how many Grace Days you have left, and what a late submission would leave you with.
 - **Estimate Bias**: log the hours a finished item really took, and future Start-by Dates are corrected by how
   far off your estimates tend to be.
 

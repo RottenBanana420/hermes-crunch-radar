@@ -39,7 +39,20 @@ def load(path):
         raise InputError("settings pace_hours_per_day and crunch_threshold_hours must be numbers above 0")
     state.setdefault("courses", {})
     state.setdefault("items", [])
+    for i in state["items"]:
+        if not valid_item(i):
+            raise InputError(f"state file {path} has a broken item {i!r}; fix or remove it, nothing was changed")
     return state
+
+
+def valid_item(i):
+    try:
+        dt.date.fromisoformat(i["due"])
+    except (TypeError, KeyError, ValueError):
+        return False
+    hours = i.get("hours")
+    return (isinstance(i.get("id"), int) and isinstance(i.get("title"), str)
+            and (hours is None or isinstance(hours, (int, float)) and hours > 0))
 
 
 def save(path, state):
@@ -65,14 +78,18 @@ def text(s):
     return s.strip()
 
 
-def grace_days(s):
+def whole_number(s, top=10000):
     try:
         n = int(s)
     except ValueError:
-        raise argparse.ArgumentTypeError(f"not a whole number of days: {s!r}")
-    if not 0 <= n <= 30:
-        raise argparse.ArgumentTypeError(f"days must be 0 to 30, got {s}")
+        raise argparse.ArgumentTypeError(f"not a whole number: {s!r}")
+    if not 0 <= n <= top:
+        raise argparse.ArgumentTypeError(f"must be 0 to {top}, got {s}")
     return n
+
+
+def grace_days(s):
+    return whole_number(s, 30)
 
 
 def positive_hours(s):
@@ -89,11 +106,16 @@ def estimate_bias(state):
     """Ratio of total actual to total estimated hours over completed items; 1.0 until one is done."""
     done = [i for i in state["items"] if i.get("done") and i.get("hours") and i.get("actual_hours")]
     est = sum(i["hours"] for i in done)
-    return round(sum(i["actual_hours"] for i in done) / est, 2) if est else 1.0
+    return sum(i["actual_hours"] for i in done) / est if est else 1.0
+
+
+def bias_text(state):
+    return f"Estimate Bias: {round(estimate_bias(state), 2):g}"
 
 
 def corrected_hours(state, item):
-    return item["hours"] * estimate_bias(state) if item.get("hours") else 0.0
+    # Round the product, not the bias: 3 h × 2/3 must be 2 h (1 day), not 3 × 0.67 = 2.01 h (2 days).
+    return round(item["hours"] * estimate_bias(state), 2) if item.get("hours") else 0.0
 
 
 def start_by(state, item):
@@ -134,7 +156,7 @@ def cmd_done(state, args):
     item.update(done=True, submitted=on.isoformat(), actual_hours=args.hours)
     late = (on - dt.date.fromisoformat(item["due"])).days
     print(f"done #{item['id']} {item['title']}" + (f", {late} day(s) late" if late > 0 else ""))
-    print(f"Estimate Bias: {estimate_bias(state):g}")
+    print(bias_text(state))
     return True
 
 
@@ -146,7 +168,7 @@ def cmd_upcoming(state, args):
     horizon = (args.today + dt.timedelta(days=args.days)).isoformat()
     items = [i for i in open_items(state) if i["due"] <= horizon]
     print("\n".join(describe(state, i) for i in items) or f"nothing due in the next {args.days} days")
-    print(f"Estimate Bias: {estimate_bias(state):g}")
+    print(bias_text(state))
     return False
 
 
@@ -178,7 +200,7 @@ def cmd_crunch(state, args):
         flag = "CRUNCH WEEK " if total > threshold else ""
         names = ", ".join(i["title"] for i in items if i.get("hours"))
         print(f"{flag}{start} to {end}: {total:g} h" + (f" ({names})" if names else ""))
-    print(f"threshold {threshold:g} h, Estimate Bias {estimate_bias(state):g}")
+    print(f"threshold {threshold:g} h, {bias_text(state)}")
     return False
 
 
@@ -238,15 +260,15 @@ def build_parser():
     d = sub.add_parser("done", parents=[common], help="mark an item done, with the hours it really took")
     d.add_argument("id", type=int)
     d.add_argument("--hours", type=positive_hours, help="actual hours spent (teaches Estimate Bias)")
-    d.add_argument("--on", type=parse_date, help="submission date, if not today (late days use Grace Days)")
+    d.add_argument("--on", type=parse_date, help="submission date, if not today (each day late uses a Grace Day)")
     d.set_defaults(fn=cmd_done)
 
     u = sub.add_parser("upcoming", parents=[common], help="open items due soon, with Start-by Dates")
-    u.add_argument("--days", type=int, default=14)
+    u.add_argument("--days", type=whole_number, default=14)
     u.set_defaults(fn=cmd_upcoming)
 
     c = sub.add_parser("crunch", parents=[common], help="corrected effort per week; flags Crunch Weeks")
-    c.add_argument("--weeks", type=int, default=4)
+    c.add_argument("--weeks", type=whole_number, default=4)
     c.set_defaults(fn=cmd_crunch)
 
     g = sub.add_parser("grace", parents=[common], help="Grace Day ledger per course")
