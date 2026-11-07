@@ -49,7 +49,7 @@ untouched.
 ## Tests
 
 ```sh
-python3 skills/crunch-radar/tests/test_crunch_radar.py
+python3 tests/test_crunch_radar.py
 ```
 
 The tests drive the CLI with a fixture state file and a fixed "today". They cover the Start-by maths,
@@ -64,7 +64,7 @@ This repo is a Hermes skill tap: one folder per skill under `skills/`.
 skills/crunch-radar/
   SKILL.md                 instructions the agent loads
   scripts/crunch_radar.py  the CLI
-  tests/                   CLI tests
+tests/test_crunch_radar.py CLI tests (outside the skill folder, so an install doesn't download them)
 ```
 
 Built for USC CSCI 599 (Agentic AI), Assignment 3. MIT licensed.

@@ -1,6 +1,7 @@
 """Crunch Radar CLI tests (seam 3): a fixture state file and a fixed "today", CLI in, text/JSON/state file out.
 
-Run: python3 skills/crunch-radar/tests/test_crunch_radar.py
+Run: python3 scripts/test_crunch_radar.py (or tests/test_crunch_radar.py in the public tap repo).
+Kept outside the skill folder: Hermes's install scan flags subprocess/os.environ in tests and blocks a community install.
 """
 import json
 import os
@@ -9,7 +10,7 @@ import sys
 import tempfile
 import unittest
 
-CLI = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts", "crunch_radar.py")
+CLI = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "skills", "crunch-radar", "scripts", "crunch_radar.py")
 
 
 class CrunchRadar(unittest.TestCase):
